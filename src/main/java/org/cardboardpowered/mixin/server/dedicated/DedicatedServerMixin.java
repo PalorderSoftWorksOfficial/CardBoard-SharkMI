@@ -58,19 +58,35 @@ public abstract class DedicatedServerMixin extends MCServerMixin implements Dedi
 
 	@Inject(at = @At(value = "JUMP", ordinal = 8), method = "initServer()Z") // TODO keep ordinal updated
 	private void init(CallbackInfoReturnable<Boolean> ci) {
+
 		// Register Bukkit Enchantments
 		// for(Enchantment enchantment : Registries.ENCHANTMENT) {
-			// TODO: check for 1.20.3+
-			// org.bukkit.enchantments.Enchantment.registerEnchantment(new CardboardEnchantment(enchantment));
-		//}
+		//     TODO: check for 1.20.3+
+		//     org.bukkit.enchantments.Enchantment.registerEnchantment(new CardboardEnchantment(enchantment));
+		// }
 
 		CardboardMagicNumbers.test();
 		CardboardMagicNumbers.setupUnknownModdedMaterials();
 
 		DedicatedServer thiss = (DedicatedServer) (Object) this;
 
-		((DedicatedServer) (Object) this).setPlayerList(new DedicatedPlayerList(thiss, thiss.registries(), playerDataStorage));
-		Bukkit.setServer(new CraftServer((DedicatedServer) (Object) this));
+		((DedicatedServer) (Object) this).setPlayerList(
+				new DedicatedPlayerList(thiss, thiss.registries(), playerDataStorage)
+		);
+
+		/*
+		 * FIX #1:
+		 * Initialize CraftServer BEFORE Bukkit.setServer AND guard version crash
+		 */
+		CraftServer craftServer = new CraftServer((DedicatedServer) (Object) this);
+
+		// Prevent Bukkit.getVersionMessage() Optional crash
+		if (System.getProperty("bukkit.version") == null) {
+			System.setProperty("bukkit.version", "Cardboard");
+		}
+
+		Bukkit.setServer(craftServer);
+
 		org.spigotmc.SpigotConfig.init(new File("spigot.yml"));
 
 		Bukkit.getLogger().info("Loading Bukkit plugins...");
@@ -80,7 +96,7 @@ public abstract class DedicatedServerMixin extends MCServerMixin implements Dedi
 		Bukkit.getPluginManager().registerInterface(JavaPluginLoader.class);
 
 		CraftServer s = ((CraftServer) Bukkit.getServer());
-		if(CraftServer.server == null) CraftServer.server = (DedicatedServer) (Object) this;
+		if (CraftServer.server == null) CraftServer.server = (DedicatedServer) (Object) this;
 
 		s.loadPlugins();
 		s.enablePlugins(PluginLoadOrder.STARTUP);
@@ -90,8 +106,22 @@ public abstract class DedicatedServerMixin extends MCServerMixin implements Dedi
 
 	@Inject(at = @At("TAIL"), method = "onServerExit")
 	public void killProcess(CallbackInfo ci) {
+
 		BukkitLogger.getLogger().info("Goodbye!");
-		Runtime.getRuntime().halt(0);
+
+		/*
+		 * FIX #2:
+		 * DO NOT use Runtime.halt() — it breaks world saving and causes:
+		 * MinecraftServer.method_30002() null crash during shutdown
+		 */
+
+		DedicatedServer server = (DedicatedServer) (Object) this;
+
+		try {
+			server.stopServer();
+		} catch (Throwable t) {
+			BukkitLogger.getLogger().severe("Safe shutdown failed: " + t.getMessage());
+		}
 	}
 
 	/**
@@ -100,21 +130,28 @@ public abstract class DedicatedServerMixin extends MCServerMixin implements Dedi
 	 */
 	@Overwrite
 	public void handleConsoleInputs() {
-		while(!this.consoleInput.isEmpty()) {
+		while (!this.consoleInput.isEmpty()) {
 			ConsoleInput servercommand = (ConsoleInput) this.consoleInput.remove(0);
 
-			ServerCommandEvent event = new ServerCommandEvent(CraftServer.INSTANCE.getConsoleSender(), servercommand.msg);
+			ServerCommandEvent event =
+					new ServerCommandEvent(CraftServer.INSTANCE.getConsoleSender(), servercommand.msg);
+
 			CraftServer.INSTANCE.getPluginManager().callEvent(event);
-			if(event.isCancelled()) continue;
+
+			if (event.isCancelled()) continue;
+
 			servercommand = new ConsoleInput(event.getCommand(), servercommand.source);
 
-			CraftServer.INSTANCE.dispatchServerCommand(CraftServer.INSTANCE.getConsoleSender(), servercommand);
+			CraftServer.INSTANCE.dispatchServerCommand(
+					CraftServer.INSTANCE.getConsoleSender(),
+					servercommand
+			);
 		}
 	}
 
 	@Inject(method = "enforceSecureProfile", at = @At("HEAD"), cancellable = true)
 	public void dontEnforceWithFix(CallbackInfoReturnable<Boolean> cir) {
-		if(CardboardConfig.REGISTRY_COMMAND_FIX)
+		if (CardboardConfig.REGISTRY_COMMAND_FIX)
 			cir.setReturnValue(false);
 	}
 
@@ -122,5 +159,4 @@ public abstract class DedicatedServerMixin extends MCServerMixin implements Dedi
 	public boolean isDebugging() {
 		return false;
 	}
-
 }
