@@ -21,7 +21,6 @@ package org.cardboardpowered.mixin.server.dedicated;
 import org.cardboardpowered.BukkitLogger;
 import org.bukkit.Bukkit;
 import org.bukkit.craftbukkit.CraftServer;
-import org.bukkit.craftbukkit.util.CraftMagicNumbers;
 import org.bukkit.event.server.ServerCommandEvent;
 import org.bukkit.plugin.PluginLoadOrder;
 import org.bukkit.plugin.java.JavaPluginLoader;
@@ -56,7 +55,7 @@ public abstract class DedicatedServerMixin extends MCServerMixin implements Dedi
 		CraftServer.server = (DedicatedServer) (Object) this;
 	}
 
-	@Inject(at = @At(value = "JUMP", ordinal = 8), method = "initServer()Z") // TODO keep ordinal updated
+	@Inject(at = @At(value = "JUMP", ordinal = 8), method = "initServer()Z")
 	private void init(CallbackInfoReturnable<Boolean> ci) {
 
 		// Register Bukkit Enchantments
@@ -68,24 +67,15 @@ public abstract class DedicatedServerMixin extends MCServerMixin implements Dedi
 		CardboardMagicNumbers.test();
 		CardboardMagicNumbers.setupUnknownModdedMaterials();
 
-		DedicatedServer thiss = (DedicatedServer) (Object) this;
+		DedicatedServer server = (DedicatedServer) (Object) this;
 
-		((DedicatedServer) (Object) this).setPlayerList(
-				new DedicatedPlayerList(thiss, thiss.registries(), playerDataStorage)
-		);
+		System.setProperty("bukkit.version", "Cardboard");
 
-		/*
-		 * FIX #1:
-		 * Initialize CraftServer BEFORE Bukkit.setServer AND guard version crash
-		 */
-		CraftServer craftServer = new CraftServer((DedicatedServer) (Object) this);
-
-		// Prevent Bukkit.getVersionMessage() Optional crash
-		if (System.getProperty("bukkit.version") == null) {
-			System.setProperty("bukkit.version", "Cardboard");
-		}
+		CraftServer craftServer = new CraftServer(server);
 
 		Bukkit.setServer(craftServer);
+		CraftServer.server = server;
+		CraftServer.INSTANCE = craftServer;
 
 		org.spigotmc.SpigotConfig.init(new File("spigot.yml"));
 
@@ -95,32 +85,22 @@ public abstract class DedicatedServerMixin extends MCServerMixin implements Dedi
 
 		Bukkit.getPluginManager().registerInterface(JavaPluginLoader.class);
 
-		CraftServer s = ((CraftServer) Bukkit.getServer());
-		if (CraftServer.server == null) CraftServer.server = (DedicatedServer) (Object) this;
+		craftServer.loadPlugins();
+		craftServer.enablePlugins(PluginLoadOrder.STARTUP);
 
-		s.loadPlugins();
-		s.enablePlugins(PluginLoadOrder.STARTUP);
+		server.setPlayerList(new DedicatedPlayerList(server, server.registries(), playerDataStorage));
 
 		Bukkit.getLogger().info("");
 	}
 
 	@Inject(at = @At("TAIL"), method = "onServerExit")
 	public void killProcess(CallbackInfo ci) {
-
 		BukkitLogger.getLogger().info("Goodbye!");
-
-		/*
-		 * FIX #2:
-		 * DO NOT use Runtime.halt() — it breaks world saving and causes:
-		 * MinecraftServer.method_30002() null crash during shutdown
-		 */
-
-		DedicatedServer server = (DedicatedServer) (Object) this;
-
 		try {
+			DedicatedServer server = (DedicatedServer) (Object) this;
 			server.stopServer();
 		} catch (Throwable t) {
-			BukkitLogger.getLogger().severe("Safe shutdown failed: " + t.getMessage());
+			BukkitLogger.getLogger().severe("Shutdown error: " + t.getMessage());
 		}
 	}
 
@@ -133,8 +113,7 @@ public abstract class DedicatedServerMixin extends MCServerMixin implements Dedi
 		while (!this.consoleInput.isEmpty()) {
 			ConsoleInput servercommand = (ConsoleInput) this.consoleInput.remove(0);
 
-			ServerCommandEvent event =
-					new ServerCommandEvent(CraftServer.INSTANCE.getConsoleSender(), servercommand.msg);
+			ServerCommandEvent event = new ServerCommandEvent(CraftServer.INSTANCE.getConsoleSender(), servercommand.msg);
 
 			CraftServer.INSTANCE.getPluginManager().callEvent(event);
 
