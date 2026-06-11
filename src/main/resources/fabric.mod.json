@@ -49,5 +49,4 @@
       "net/minecraft/class_3248": ["org/cardboardpowered/bridge/server/network/ServerLoginPacketListenerImplBridge"]
     }
   }
-
 }
