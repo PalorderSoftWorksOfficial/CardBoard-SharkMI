@@ -71,6 +71,8 @@ public abstract class DedicatedServerMixin extends MCServerMixin implements Dedi
 
 		System.setProperty("bukkit.version", "Cardboard");
 
+		server.setPlayerList(new DedicatedPlayerList(server, server.registries(), playerDataStorage));
+
 		CraftServer craftServer = new CraftServer(server);
 
 		Bukkit.setServer(craftServer);
@@ -87,8 +89,6 @@ public abstract class DedicatedServerMixin extends MCServerMixin implements Dedi
 
 		craftServer.loadPlugins();
 		craftServer.enablePlugins(PluginLoadOrder.STARTUP);
-
-		server.setPlayerList(new DedicatedPlayerList(server, server.registries(), playerDataStorage));
 
 		Bukkit.getLogger().info("");
 	}
