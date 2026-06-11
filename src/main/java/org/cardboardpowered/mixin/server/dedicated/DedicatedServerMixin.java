@@ -61,6 +61,7 @@ public abstract class DedicatedServerMixin extends MCServerMixin implements Dedi
 		// Register Bukkit Enchantments
 		// for(Enchantment enchantment : Registries.ENCHANTMENT) {
 		//     TODO: check for 1.20.3+
+        //     TODO note: Do we really need this? like this TODO note as we can just uncomment this
 		//     org.bukkit.enchantments.Enchantment.registerEnchantment(new CardboardEnchantment(enchantment));
 		// }
 
