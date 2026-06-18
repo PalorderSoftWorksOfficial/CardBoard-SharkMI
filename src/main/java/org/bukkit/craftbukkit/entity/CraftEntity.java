@@ -389,9 +389,10 @@ public abstract class CraftEntity implements org.bukkit.entity.Entity {
     @Override public BlockFace getFacing() { return CraftBlock.notchToBlockFace(this.getHandle().getMotionDirection()); }
     @Override public CraftPersistentDataContainer getPersistentDataContainer() { return this.persistentDataContainer; }
     @Override public Pose getPose() { return Pose.values()[this.getHandle().getPose().ordinal()]; }
+    public void setPose0(net.minecraft.world.entity.Pose pose, boolean fixed) { this.getHandle().setPose(pose); }
     @Override public void setSneaking(boolean sneak) { this.getHandle().setShiftKeyDown(sneak); }
     @Override public boolean isSneaking() { return this.getHandle().isShiftKeyDown(); }
-    @Override public void setPose(Pose pose, boolean fixed) { Preconditions.checkArgument(pose != null, "pose cannot be null"); this.getHandle().setPose(net.minecraft.world.entity.Pose.values()[pose.ordinal()]); }
+    @Override public void setPose(Pose pose, boolean fixed) { Preconditions.checkArgument(pose != null, "pose cannot be null"); this.setPose0(net.minecraft.world.entity.Pose.values()[pose.ordinal()], fixed); }
     @Override public boolean hasFixedPose() { return false; }
     @Override public SpawnCategory getSpawnCategory() { return CraftSpawnCategory.toBukkit(this.getHandle().getType().getCategory()); }
     @Override public boolean isInWorld() { return ((EntityBridge)this.getHandle()).cb$getInWorld(); }
