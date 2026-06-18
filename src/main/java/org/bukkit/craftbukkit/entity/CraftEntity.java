@@ -315,7 +315,7 @@ public abstract class CraftEntity implements org.bukkit.entity.Entity {
     @Override public boolean isPersistent() { return false; }
     @Override public void setPersistent(boolean persistent) { }
     @Override public org.bukkit.entity.Entity getPassenger() { return this.isEmpty() ? null : this.getHandle().getPassengers().getFirst().getBukkitEntity(); }
-    @Override public boolean setPassenger(org.bukkit.entity.Entity passenger) { Preconditions.checkArgument(!this.equals(passenger), "Entity cannot ride itself."); return passenger instanceof CraftEntity c ? (this.eject(), c.getHandle().startRiding(this.getHandle())) : false; }
+    @Override public boolean setPassenger(org.bukkit.entity.Entity passenger) { Preconditions.checkArgument(!this.equals(passenger), "Entity cannot ride itself."); if (passenger instanceof CraftEntity c) { this.eject(); return c.getHandle().startRiding(this.getHandle()); } return false; }
     @Override public List<org.bukkit.entity.Entity> getPassengers() { return Lists.newArrayList(Lists.transform(this.getHandle().getPassengers(), (Function<Entity, org.bukkit.entity.Entity>) Entity::getBukkitEntity)); }
     @Override public boolean addPassenger(org.bukkit.entity.Entity passenger) { Preconditions.checkArgument(passenger != null, "Entity passenger cannot be null"); Preconditions.checkArgument(!this.equals(passenger), "Entity cannot ride itself."); return ((CraftEntity) passenger).getHandle().startRiding(this.getHandle(), true, true); }
     @Override public boolean removePassenger(org.bukkit.entity.Entity passenger) { Preconditions.checkArgument(passenger != null, "Entity passenger cannot be null"); ((CraftEntity) passenger).getHandle().stopRiding(); return true; }
